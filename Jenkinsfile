@@ -19,6 +19,18 @@ pipeline {
             }
         }
 
+        stage('Syntax Check') {
+            steps {
+                script {
+                    if (isUnix()) {
+                        sh 'npm run syntax'
+                    } else {
+                        bat 'npm run syntax'
+                    }
+                }
+            }
+        }
+
         stage('Check Docker') {
             steps {
                 script {
@@ -53,7 +65,7 @@ pipeline {
                         '''
                     } else {
                         bat '''
-                            docker rm -f electricity-bill-app || exit /b 0
+                            cmd /c "docker rm -f electricity-bill-app >nul 2>&1 || ver >nul"
                             docker run -d --name electricity-bill-app -p %HOST_PORT%:%APP_PORT% %IMAGE_NAME%:latest
                         '''
                     }
@@ -68,7 +80,7 @@ pipeline {
                         sh '''
                             ok=0
                             for i in 1 2 3 4 5 6 7 8 9 10; do
-                              if wget -qO- http://host.docker.internal:${HOST_PORT}/health >/dev/null 2>&1 || curl -fsS http://host.docker.internal:${HOST_PORT}/health >/dev/null 2>&1 || curl -fsS http://localhost:${HOST_PORT}/health >/dev/null 2>&1; then
+                              if curl -fsS http://localhost:${HOST_PORT}/health >/dev/null 2>&1 || curl -fsS http://host.docker.internal:${HOST_PORT}/health >/dev/null 2>&1; then
                                 ok=1
                                 break
                               fi
@@ -82,7 +94,7 @@ pipeline {
                         '''
                     } else {
                         bat '''
-                            powershell -NoProfile -Command "$ok=$false; for($i=0;$i -lt 15;$i++){ try { $r=Invoke-WebRequest -UseBasicParsing http://localhost:%HOST_PORT%/health; if($r.StatusCode -eq 200){ $ok=$true; break } } catch { Start-Sleep -Seconds 2 } }; if(-not $ok){ Write-Host 'App did not start'; exit 1 } else { Write-Host 'App is UP on port %HOST_PORT%' }"
+                            powershell -NoProfile -ExecutionPolicy Bypass -Command "$ok=$false; for($i=0;$i -lt 15;$i++){ try { $r=Invoke-WebRequest -UseBasicParsing http://localhost:%HOST_PORT%/health; if($r.StatusCode -eq 200){ $ok=$true; break } } catch { Start-Sleep -Seconds 2 } }; if(-not $ok){ Write-Host 'App did not start on port %HOST_PORT%'; exit 1 } else { Write-Host 'App is UP and healthy on port %HOST_PORT%' }"
                         '''
                     }
                 }
@@ -92,10 +104,10 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline completed. Image ${IMAGE_NAME}:latest is running on host port ${HOST_PORT}."
+            echo "Pipeline completed successfully! Docker image ${IMAGE_NAME}:latest is running on host port ${HOST_PORT}."
         }
         failure {
-            echo 'Pipeline failed. Check Docker engine and Jenkinsfile at repository root.'
+            echo 'Pipeline failed. Check Docker engine and Jenkins logs.'
         }
     }
 }
