@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Electricity Bill Calculation</title>
+  <style>
+    :root { font-family: Segoe UI, Arial, sans-serif; }
+    body { margin: 0; background: #f4f7fb; color: #1c2430; }
+    .wrap { max-width: 640px; margin: 48px auto; background: #fff; padding: 28px; border-radius: 12px; box-shadow: 0 8px 24px rgba(20,40,80,.08); }
+    h1 { margin: 0 0 8px; font-size: 1.6rem; }
+    p { color: #5b6777; }
+    label { display: block; font-weight: 600; margin-bottom: 8px; }
+    input { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #cfd8e3; border-radius: 8px; font-size: 1rem; }
+    button { margin-top: 14px; background: #1b6ef3; color: #fff; border: 0; padding: 12px 18px; border-radius: 8px; font-size: 1rem; cursor: pointer; }
+    button:hover { background: #0f57c9; }
+    .result { margin-top: 20px; display: none; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e6edf5; }
+    .total { font-size: 1.2rem; font-weight: 700; margin-top: 12px; }
+    .error { color: #b42318; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Electricity Bill Calculation</h1>
+    <p>Enter units consumed to calculate the bill using slab rates.</p>
+    <form id="bill-form">
+      <label for="units">Units consumed</label>
+      <input id="units" name="units" type="number" min="0" step="0.01" required placeholder="e.g. 245" />
+      <button type="submit">Calculate Bill</button>
+    </form>
+    <div class="error" id="error"></div>
+    <div class="result" id="result">
+      <h2>Bill Summary</h2>
+      <table>
+        <thead>
+          <tr><th>Units</th><th>Rate (Rs)</th><th>Amount (Rs)</th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <p>Energy charge: Rs <span id="energy"></span></p>
+      <p>Fixed charge: Rs <span id="fixed"></span></p>
+      <p class="total">Total payable: Rs <span id="total"></span></p>
+    </div>
+  </div>
+  <script>
+    const form = document.getElementById("bill-form");
+    const errorEl = document.getElementById("error");
+    const resultEl = document.getElementById("result");
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      errorEl.textContent = "";
+      resultEl.style.display = "none";
+      const units = document.getElementById("units").value;
+      const response = await fetch("/api/calculate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ units })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        errorEl.textContent = data.error || "Could not calculate bill";
+        return;
+      }
+      document.getElementById("rows").innerHTML = data.breakdown.map((row) => (
+        `<tr><td>${row.units}</td><td>${row.rate.toFixed(2)}</td><td>${row.amount.toFixed(2)}</td></tr>`
+      )).join("");
+      document.getElementById("energy").textContent = data.energyCharge.toFixed(2);
+      document.getElementById("fixed").textContent = data.fixedCharge.toFixed(2);
+      document.getElementById("total").textContent = data.total.toFixed(2);
+      resultEl.style.display = "block";
+    });
+  </script>
+</body>
+</html>
