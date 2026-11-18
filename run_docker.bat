@@ -23,8 +23,9 @@ timeout /t 3 /nobreak >nul
 docker ps --filter "name=electricity-bill-app"
 echo.
 echo ================================================================
-echo [SUCCESS] App is running!
+echo [SUCCESS] App is running! Opening browser now...
 echo URL: http://localhost:5000
-echo Health Check: http://localhost:5000/health
 echo ================================================================
+
+start http://localhost:5000
 pause
